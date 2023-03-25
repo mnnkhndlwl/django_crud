@@ -4,10 +4,12 @@ from rest_framework.parsers import JSONParser
 from django.http.response import JsonResponse
 from rest_framework.decorators import api_view
 from EmployeeApp.models import Departments,Employees
-from EmployeeApp.serializers import DepartmentSerializer,EmployeeSerializer
-
+from EmployeeApp.serializers import DepartmentSerializer,EmployeeSerializer,UserSerializer
+from rest_framework import status
 from django.core.files.storage import default_storage
-
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from django.contrib.auth import authenticate, login
 
 # Create your views here.
 
@@ -70,4 +72,24 @@ def SaveFile(request):
     file_name=default_storage.save(file.name,file)
     return JsonResponse(file_name,safe=False)
 
-    
+class SignupView(APIView):
+    permission_classes = [AllowAny]
+    @csrf_exempt
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return JsonResponse("user created",safe=False)
+        return JsonResponse("error")
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+    @csrf_exempt
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user:
+            login(request, user)
+            return JsonResponse({'data' : UserSerializer(user).data }, status=status.HTTP_200_OK)
+        return JsonResponse({'error': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
